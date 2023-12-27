@@ -1,0 +1,7 @@
+{
+  "id": "exec-code-block",
+  "name": "Exec Code Block",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "isDesktopOnly": true
+}

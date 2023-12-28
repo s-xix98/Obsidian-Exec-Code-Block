@@ -1,13 +1,27 @@
 import { exec } from "child_process";
 import { writeFile } from "fs";
-import { App, Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { z } from "zod";
+
+const ExecLangSettingSchema = z.object({
+  lang: z.string(),
+  filename: z.string(),
+  execCmd: z.string(),
+});
+type ExecLangSetting = z.infer<typeof ExecLangSettingSchema>;
+
+const ExecSettingsSchema = z.object({
+  execDir: z.string(),
+  execLangs: ExecLangSettingSchema.array(),
+});
+type ExecSettings = z.infer<typeof ExecSettingsSchema>;
 
 interface MyPluginSettings {
-  execdir: string | undefined;
+  execSettings: string | undefined;
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
-  execdir: undefined,
+  execSettings: undefined,
 };
 
 export default class ExecCodeBlock extends Plugin {
@@ -18,45 +32,63 @@ export default class ExecCodeBlock extends Plugin {
     await this.loadSettings();
 
     this.registerMarkdownPostProcessor((element, context) => {
-      const codeblocks = element.findAll("code");
-      for (const codeblock of codeblocks) {
-        const langClassPrefix = "language-";
-        const lang = codeblock.className.substring(
-          codeblock.className.indexOf(langClassPrefix) + langClassPrefix.length
+      try {
+        const execSettings = ExecSettingsSchema.parse(
+          JSON.parse(this.settings.execSettings ?? "")
         );
-        console.log("--- --- ---");
-        console.log("lang is", lang);
-        console.log(codeblock.innerText);
+        const codeblocks = element.findAll("code");
+        for (const codeblock of codeblocks) {
+          const langClassPrefix = "language-";
+          const lang = codeblock.className.substring(
+            codeblock.className.indexOf(langClassPrefix) +
+              langClassPrefix.length
+          );
+          console.log("--- --- ---");
+          console.log("lang is", lang);
+          console.log(codeblock.innerText);
 
-        this.addExecCodeBlockArea(lang, codeblock);
+          const execLangSetting = execSettings.execLangs.find(
+            (e) => e.lang === lang
+          );
+          if (execLangSetting) {
+            this.addExecCodeBlockArea(
+              codeblock,
+              execSettings.execDir,
+              execLangSetting
+            );
+          }
+        }
+      } catch (e) {
+        console.error(e);
       }
     });
 
     this.addSettingTab(new ExecCodeBlockSettingTab(this.app, this));
   }
 
-  addExecCodeBlockArea(lang: string, codeblock: HTMLElement) {
-    const execDir = this.settings.execdir;
-    const execCmd = `python3 tmp.py`;
-
-    if (lang !== "python") {
-      return;
-    }
-
+  addExecCodeBlockArea(
+    codeblock: HTMLElement,
+    execDir: string,
+    execLangSetting: ExecLangSetting
+  ) {
     codeblock.parentNode?.appendChild(
       createEl("div", { cls: "exec_code_block" }, (execCodeBlockRootDiv) => {
         const outputEl = createEl("p");
 
         const onClickExecBtnHandler = () => {
-          if (!execDir) {
-            new Notice("exec dir is not set");
-            return;
-          }
-          writeFile(`${execDir}/tmp.py`, codeblock.innerText, () => {});
-          exec(execCmd, { cwd: execDir }, (err, stdout, stderr) => {
-            outputEl.textContent =
-              "--- stdout ---\n" + stdout + "\n--- stderr ---\n" + stderr;
-          });
+          writeFile(
+            `${execDir}/${execLangSetting.filename}`,
+            codeblock.innerText,
+            () => {}
+          );
+          exec(
+            execLangSetting.execCmd,
+            { cwd: execDir },
+            (err, stdout, stderr) => {
+              outputEl.textContent =
+                "--- stdout ---\n" + stdout + "\n--- stderr ---\n" + stderr;
+            }
+          );
         };
 
         execCodeBlockRootDiv.appendChild(createEl("br"));
@@ -83,7 +115,7 @@ export default class ExecCodeBlock extends Plugin {
           createEl("p", { text: `cwd : ${execDir}` })
         );
         execCodeBlockRootDiv.appendChild(
-          createEl("p", { text: `cmd : ${execCmd}` })
+          createEl("p", { text: `cmd : ${execLangSetting.execCmd}` })
         );
         execCodeBlockRootDiv.appendChild(createEl("br"));
         execCodeBlockRootDiv.appendChild(outputEl);
@@ -113,14 +145,16 @@ class ExecCodeBlockSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    new Setting(containerEl).setName("Exec Dir Full Path").addText((text) => {
-      text
-        .setPlaceholder("")
-        .setValue(this.plugin.settings.execdir ?? "")
-        .onChange(async (value) => {
-          this.plugin.settings.execdir = value;
-          await this.plugin.saveSettings();
-        });
-    });
+    new Setting(containerEl)
+      .setName("Exec Dir Full Path")
+      .addTextArea((text) => {
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.execSettings ?? "")
+          .onChange(async (value) => {
+            this.plugin.settings.execSettings = value;
+            await this.plugin.saveSettings();
+          });
+      });
   }
 }

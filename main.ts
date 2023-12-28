@@ -76,6 +76,7 @@ export default class ExecCodeBlock extends Plugin {
         const outputEl = createEl("p");
 
         const onClickExecBtnHandler = () => {
+          outputEl.textContent = "Executing...";
           writeFile(
             `${execDir}/${execLangSetting.filename}`,
             codeblock.innerText,

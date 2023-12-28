@@ -1,0 +1,24 @@
+.exec_code_block {
+  font-size: 14px;
+}
+
+.exec_code_block > div {
+  margin: 3px 0px;
+}
+
+.exec_code_block > hr {
+  margin: 3px 0px;
+}
+
+.exec_code_block > p {
+  margin: 3px 0px;
+}
+
+.exec_code_block_top_line {
+  flex: 1;
+  display: flex;
+}
+
+.exec_code_block_top_line_left {
+  margin: auto 10px auto auto;
+}

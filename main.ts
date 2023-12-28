@@ -1,4 +1,6 @@
-import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { exec } from "child_process";
+import { writeFile } from "fs";
+import { App, Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
 
 interface MyPluginSettings {
   execdir: string | undefined;
@@ -25,10 +27,68 @@ export default class ExecCodeBlock extends Plugin {
         console.log("--- --- ---");
         console.log("lang is", lang);
         console.log(codeblock.innerText);
+
+        this.addExecCodeBlockArea(lang, codeblock);
       }
     });
 
     this.addSettingTab(new ExecCodeBlockSettingTab(this.app, this));
+  }
+
+  addExecCodeBlockArea(lang: string, codeblock: HTMLElement) {
+    const execDir = this.settings.execdir;
+    const execCmd = `python3 tmp.py`;
+
+    if (lang !== "python") {
+      return;
+    }
+
+    codeblock.parentNode?.appendChild(
+      createEl("div", { cls: "exec_code_block" }, (execCodeBlockRootDiv) => {
+        const outputEl = createEl("p");
+
+        const onClickExecBtnHandler = () => {
+          if (!execDir) {
+            new Notice("exec dir is not set");
+            return;
+          }
+          writeFile(`${execDir}/tmp.py`, codeblock.innerText, () => {});
+          exec(execCmd, { cwd: execDir }, (err, stdout, stderr) => {
+            outputEl.textContent =
+              "--- stdout ---\n" + stdout + "\n--- stderr ---\n" + stderr;
+          });
+        };
+
+        execCodeBlockRootDiv.appendChild(createEl("br"));
+        execCodeBlockRootDiv.appendChild(createEl("hr"));
+        execCodeBlockRootDiv.appendChild(
+          createEl("div", { cls: "exec_code_block_top_line" }, (el) => {
+            el.appendChild(createEl("p", { text: "Exec Code Block" }));
+            el.appendChild(
+              createEl(
+                "div",
+                { cls: "exec_code_block_top_line_left" },
+                (el) => {
+                  el.appendChild(
+                    createEl("button", { text: "exec" }, (btnEl) => {
+                      btnEl.addEventListener("click", onClickExecBtnHandler);
+                    })
+                  );
+                }
+              )
+            );
+          })
+        );
+        execCodeBlockRootDiv.appendChild(
+          createEl("p", { text: `cwd : ${execDir}` })
+        );
+        execCodeBlockRootDiv.appendChild(
+          createEl("p", { text: `cmd : ${execCmd}` })
+        );
+        execCodeBlockRootDiv.appendChild(createEl("br"));
+        execCodeBlockRootDiv.appendChild(outputEl);
+      })
+    );
   }
 
   async loadSettings() {

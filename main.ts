@@ -39,10 +39,16 @@ export default class ExecCodeBlock extends Plugin {
         const codeblocks = element.findAll("code");
         for (const codeblock of codeblocks) {
           const langClassPrefix = "language-";
+          // language-python -> python
+          // language-python:tmp.py -> python
           const lang = codeblock.className.substring(
             codeblock.className.indexOf(langClassPrefix) +
-              langClassPrefix.length
+              langClassPrefix.length,
+            codeblock.className.indexOf(":") !== -1
+              ? codeblock.className.indexOf(":")
+              : undefined
           );
+
           console.log("--- --- ---");
           console.log("lang is", lang);
           console.log(codeblock.innerText);

@@ -4,6 +4,7 @@
 
 ```shell
 npm install --save-exact --save-dev esbuild obsidian @types/node typescript
+npm i zod
 ```
 
 ## Obsidian

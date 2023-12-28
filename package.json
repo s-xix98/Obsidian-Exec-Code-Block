@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "tsc --noEmit main.ts && esbuild main.ts --bundle --outfile=main.js --packages=external --format=cjs"
+    "build": "tsc --noEmit main.ts && esbuild main.ts --bundle --outfile=main.js --format=cjs --platform=node --external:obsidian"
   },
   "devDependencies": {
     "@types/node": "20.10.5",

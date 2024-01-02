@@ -5,6 +5,7 @@
 ```json
 {
   "execDir": "exec dir full path",
+  "codeCmd": "code btn full path",
   "execLangs": [
     {
       "lang": "c",
@@ -26,6 +27,7 @@
 ```
 
 - execDir : Directory where the command is executed
+- codeCmd : Vscode Code Cmd Path -> exec codeCmd execDir
 - execLangs
   - lang : Same language as the code block in the markdown
   - filename : Name of file to be created in execdir

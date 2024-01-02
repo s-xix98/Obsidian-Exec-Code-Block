@@ -12,6 +12,7 @@ type ExecLangSetting = z.infer<typeof ExecLangSettingSchema>;
 
 const ExecSettingsSchema = z.object({
   execDir: z.string(),
+  codeCmd: z.string().optional(),
   execLangs: ExecLangSettingSchema.array(),
 });
 type ExecSettings = z.infer<typeof ExecSettingsSchema>;
@@ -60,6 +61,7 @@ export default class ExecCodeBlock extends Plugin {
             this.addExecCodeBlockArea(
               codeblock,
               execSettings.execDir,
+              execSettings.codeCmd,
               execLangSetting
             );
           }
@@ -75,19 +77,32 @@ export default class ExecCodeBlock extends Plugin {
   addExecCodeBlockArea(
     codeblock: HTMLElement,
     execDir: string,
+    codeCmd: string | undefined,
     execLangSetting: ExecLangSetting
   ) {
     codeblock.parentNode?.appendChild(
       createEl("div", { cls: "exec_code_block" }, (execCodeBlockRootDiv) => {
         const outputEl = createEl("p");
 
-        const onClickExecBtnHandler = () => {
-          outputEl.textContent = "Executing...";
+        const createExecTargetFile = () => {
           writeFile(
             `${execDir}/${execLangSetting.filename}`,
             codeblock.innerText,
             () => {}
           );
+        };
+
+        const onClickCodeBtnHandler = () => {
+          if (!codeCmd) {
+            return;
+          }
+          createExecTargetFile();
+          exec(`${codeCmd} ${execDir}`, { cwd: execDir });
+        };
+
+        const onClickExecBtnHandler = () => {
+          createExecTargetFile();
+          outputEl.textContent = "Executing...";
           exec(
             execLangSetting.execCmd,
             { cwd: execDir },
@@ -113,6 +128,13 @@ export default class ExecCodeBlock extends Plugin {
                       btnEl.addEventListener("click", onClickExecBtnHandler);
                     })
                   );
+                  if (codeCmd) {
+                    el.appendChild(
+                      createEl("button", { text: "code" }, (btnEl) => {
+                        btnEl.addEventListener("click", onClickCodeBtnHandler);
+                      })
+                    );
+                  }
                 }
               )
             );
